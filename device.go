@@ -1,8 +1,11 @@
+//go:build linux
 // +build linux
 
 package v4l2
 
 import (
+	"encoding/json"
+	"fmt"
 	"io"
 	"syscall"
 	"unsafe"
@@ -34,6 +37,7 @@ type Device struct {
 
 // Open device
 func Open(path string) (*Device, error) {
+	fmt.Println("OpenDevice")
 	fd, err := unix.Open(path, unix.O_RDWR, 0666)
 	if nil != err {
 		return nil, err
@@ -53,6 +57,8 @@ func (dev *Device) Close() error {
 
 // SetBitrate configures the target bitrate of encoder
 func (dev *Device) SetBitrate(bitrate int32) error {
+	fmt.Println("SetBitrate")
+
 	return setCodecControl(dev.fd, V4L2_CID_MPEG_VIDEO_BITRATE, bitrate)
 }
 
@@ -66,11 +72,21 @@ func (dev *Device) SetPixelFormat(width, height, format int) error {
 		pixelformat: uint32(format),
 		field:       V4L2_FIELD_ANY,
 	}
-	fmt := v4l2_format{
+	fmt.Println("SetPixelFormat_pfmt")
+	fmt.Printf("%d %d %d\n", pfmt.width, pfmt.height, pfmt.pixelformat)
+	st, _ := json.MarshalIndent(pfmt, "", "\t")
+	fmt.Println(st)
+
+	ft := v4l2_format{
 		typ: V4L2_BUF_TYPE_VIDEO_CAPTURE,
 		fmt: pfmt.marshal(),
 	}
-	return ioctl(dev.fd, VIDIOC_S_FMT, unsafe.Pointer(&fmt))
+	fmt.Println("SetPixelFormat")
+	s, _ := json.MarshalIndent(ft, "", "\t")
+	fmt.Println(s)
+	fmt.Printf("%#v\n", ft)
+
+	return ioctl(dev.fd, VIDIOC_S_FMT, unsafe.Pointer(&ft))
 }
 
 // SetRepeatSequenceHeader configures the device to output sequence
@@ -82,6 +98,7 @@ func (dev *Device) SetRepeatSequenceHeader(on bool) error {
 	if on {
 		value = 1
 	}
+	fmt.Println("SetRepeatSequenceHeader")
 	return setCodecControl(dev.fd, V4L2_CID_MPEG_VIDEO_REPEAT_SEQ_HEADER, value)
 }
 
@@ -141,11 +158,13 @@ func (dev *Device) Start() error {
 
 	// Enable stream
 	typ := V4L2_BUF_TYPE_VIDEO_CAPTURE
+	fmt.Println("stream enable")
 	return ioctl(dev.fd, VIDIOC_STREAMON, unsafe.Pointer(&typ))
 }
 
 // Stop video capture
 func (dev *Device) Stop() error {
+	fmt.Println("Stop video capture")
 	// Disable stream (dequeues any outstanding buffers as well).
 	typ := V4L2_BUF_TYPE_VIDEO_CAPTURE
 	if err := ioctl(dev.fd, VIDIOC_STREAMOFF, unsafe.Pointer(&typ)); nil != err {
@@ -169,11 +188,16 @@ func (dev *Device) Stop() error {
 
 // setCodecControl configures the value of a codec-specific control id
 func setCodecControl(fd int, id uint32, value int32) error {
+	fmt.Println("setCodecControl")
+	fmt.Printf("%d id: %d value: %d\n", V4L2_CTRL_CLASS_MPEG, id, value)
+
 	return setControl(fd, V4L2_CTRL_CLASS_MPEG, id, value)
 }
 
 // setControl configures the value of a control id
 func setControl(fd int, class, id uint32, value int32) error {
+	fmt.Println("setControl")
+
 	const numControls = 1
 
 	ctrls := [numControls]v4l2_ext_control{
@@ -183,12 +207,16 @@ func setControl(fd int, class, id uint32, value int32) error {
 		},
 	}
 	nativeEndian.PutUint32(ctrls[0].value[:], uint32(value))
+	fmt.Println("SetControl_ctrls")
+	fmt.Printf("%#v\n", ctrls)
 
 	extctrls := v4l2_ext_controls{
 		ctrl_class: class,
 		count:      numControls,
 		controls:   unsafe.Pointer(&ctrls),
 	}
+	fmt.Println("SetControl_ctrls2")
+	fmt.Printf("%#v\n", extctrls)
 
 	return ioctl(fd, VIDIOC_S_EXT_CTRLS, unsafe.Pointer(&extctrls))
 }
@@ -208,6 +236,7 @@ func ioctl(fd int, req uint, arg unsafe.Pointer) error {
 
 // Query buffer parameters.
 func queryBuffer(fd int, n uint32) (length, offset uint32, err error) {
+	fmt.Println("queryBuffer")
 	qb := v4l2_buffer{
 		index:  n,
 		typ:    V4L2_BUF_TYPE_VIDEO_CAPTURE,
@@ -224,6 +253,8 @@ func queryBuffer(fd int, n uint32) (length, offset uint32, err error) {
 
 // Request specified number of kernel-space buffers from device
 func requestBuffers(fd int, n int) error {
+	fmt.Println("requestBuffers")
+
 	rb := v4l2_requestbuffers{
 		count:  uint32(n),
 		typ:    V4L2_BUF_TYPE_VIDEO_CAPTURE,
@@ -234,6 +265,7 @@ func requestBuffers(fd int, n int) error {
 
 // enqueue buffer to device
 func enqueue(fd int, index int) error {
+	// fmt.Println("enqueue buffer to device")
 	qbuf := v4l2_buffer{
 		typ:    V4L2_BUF_TYPE_VIDEO_CAPTURE,
 		memory: V4L2_MEMORY_MMAP,
@@ -244,6 +276,8 @@ func enqueue(fd int, index int) error {
 
 // dequeue next buffer from device
 func dequeue(fd int) (int, int, error) {
+	// fmt.Println("dequeue buffer to device")
+
 	dqbuf := v4l2_buffer{
 		typ: V4L2_BUF_TYPE_VIDEO_CAPTURE,
 	}
