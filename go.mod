@@ -1,4 +1,4 @@
-module github.com/thinkski/go-v4l2
+module github.com/ch3ri0ur/go-v4l2
 
 go 1.13
 
