@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/thinkski/go-v4l2"
+	"github.com/ch3ri0ur/go-v4l2"
 )
 
 var flagBitrate int
