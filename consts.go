@@ -50,6 +50,7 @@ const (
 	V4L2_CID_GAIN               = V4L2_CID_BASE + 19
 	V4L2_CID_HFLIP              = V4L2_CID_BASE + 20
 	V4L2_CID_VFLIP              = V4L2_CID_BASE + 21
+	V4L2_CID_ROTATE             = V4L2_CID_BASE + 34
 
 	// MPEG-class control IDs
 	V4L2_CID_MPEG_BASE                    = V4L2_CTRL_CLASS_MPEG | 0x900

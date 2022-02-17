@@ -55,6 +55,12 @@ func (dev *Device) Close() error {
 	return unix.Close(dev.fd)
 }
 
+// Rotate configures the picture rotation
+func (dev *Device) SetRotation(bitrate int32) error {
+	fmt.Println("SetRotation")
+	return setUserControl(dev.fd, V4L2_CID_ROTATE, bitrate)
+}
+
 // SetBitrate configures the target bitrate of encoder
 func (dev *Device) SetBitrate(bitrate int32) error {
 	fmt.Println("SetBitrate")
@@ -184,6 +190,24 @@ func (dev *Device) Stop() error {
 	// Count of zero frees all buffers, after aborting or finishing any
 	// DMA in progress.
 	return requestBuffers(dev.fd, 0)
+}
+
+// Allows Custom User Control Settings
+func (dev *Device) SetCustomUserControl(id uint32, value int32) error {
+	return setUserControl(dev.fd, id, value)
+}
+
+// setUserControl configures the value of a user-specific control id
+func setUserControl(fd int, id uint32, value int32) error {
+	fmt.Println("setUserControl")
+	fmt.Printf("%d id: %d value: %d\n", V4L2_CTRL_CLASS_USER, id, value)
+
+	return setControl(fd, V4L2_CTRL_CLASS_USER, id, value)
+}
+
+// Allows Custom Codec Control Settings
+func (dev *Device) SetCustomCodecControl(id uint32, value int32) error {
+	return setCodecControl(dev.fd, id, value)
 }
 
 // setCodecControl configures the value of a codec-specific control id
